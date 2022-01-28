@@ -89,6 +89,7 @@ def load_logs_dates(from_time, to_time, logs_upfolder):
         data_enc = bytes(json.dumps(data, default=str).encode())
         filename = f'meetings_logs_{from_time}_{to_time}.json'
         filepath = f'{logs_upfolder}/{filename}'
+        data_enc= json.loads(data_enc)
         S3.put_object(
             Body=data_enc, 
             Bucket=ZOOM_BUCKET, 
