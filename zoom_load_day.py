@@ -9,12 +9,12 @@ import datetime
 import threading
 from random import randint
 from urllib.request import (
-    Request, 
-    urlopen, 
-    URLError, 
-    HTTPError, 
-    ProxyHandler, 
-    build_opener, 
+    Request,
+    urlopen,
+    URLError,
+    HTTPError,
+    ProxyHandler,
+    build_opener,
     install_opener)
 from urllib.parse import quote, unquote
 from time import sleep, gmtime, strftime
@@ -106,31 +106,34 @@ def load_meetings_data_chunks(meetings_data, root_dir, chunk_size):
     print('total meetings:', len(meetings_data['meetings']))
     count = 0
     for meeting in meetings_data['meetings']:
-        for record_file in meeting['recording_files']:
-            file_name = '{}-{}.{}'.format(
-                record_file['recording_type'].replace('_', '-'),
-                record_file['id'],
-                record_file['file_extension']
-            )
-            file_path = root_dir + '/' + str(meeting['id']) + '/' + file_name
-            url = record_file['download_url'] + '?access_token=' + JWT_TOKEN
-            try:
-                response = urlopen(url)
-                with open(file_name, 'wb') as file:
-                    while True:
-                        chunk = response.read(chunk_size)
-                        if not chunk:
-                            break
-                        file.write(chunk)
-                S3.upload_file(
-                    file_name, 
-                    ZOOM_BUCKET, 
-                    file_path
+        try:
+            for record_file in meeting['recording_files']:
+                file_name = '{}-{}.{}'.format(
+                    record_file['recording_type'].replace('_', '-'),
+                    record_file['id'],
+                    record_file['file_extension']
                 )
-                os.remove(file_name)
-            except Exception as e:
-                print('ERROR', url, '|', e)
-            print(f'meeting {meeting["id"]} uploading to bucket->{ZOOM_BUCKET} folder->{file_path}')
+                file_path = root_dir + '/' + str(meeting['id']) + '/' + file_name
+                url = record_file['download_url'] + '?access_token=' + JWT_TOKEN
+                try:
+                    response = urlopen(url)
+                    with open(file_name, 'wb') as file:
+                        while True:
+                            chunk = response.read(chunk_size)
+                            if not chunk:
+                                break
+                            file.write(chunk)
+                    S3.upload_file(
+                        file_name,
+                        ZOOM_BUCKET,
+                        file_path
+                    )
+                    os.remove(file_name)
+                except Exception as e:
+                    print('ERROR', url, '|', e)
+                print(f'meeting {meeting["id"]} uploading to bucket->{ZOOM_BUCKET} folder->{file_path}')
+        except Exception as e:
+            print('ERROR at meeting:', meeting, '|', e)
         count += 1
     print('finished', count)
 
