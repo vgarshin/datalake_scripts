@@ -33,7 +33,7 @@ MAX_COUNTS = 5
 TIMEOUT = 20
 LOGS_UPFOLDER_BASE = 'air-meetings-logs'
 ROOT_DIR = 'air-meetings-data'
-CUR_TIMESTAMP = datetime.datetime.now()
+CUR_TIMESTAMP = '2022-01-31'
 CHUNK_SIZE = 16 * 1024
 
 SESSION = boto3.session.Session()
