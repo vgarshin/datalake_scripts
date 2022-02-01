@@ -19,9 +19,10 @@ from urllib.request import (
 from urllib.parse import quote, unquote
 from time import sleep, gmtime, strftime
 
-with open('access_s3.json') as file:
+ACCESS_PATH = '/home/jovyan/zoomdataload'
+with open(f'{ACCESS_PATH}/access_s3.json') as file:
     access_s3_data = json.load(file)
-with open('access_zoom.json') as file:
+with open(f'{ACCESS_PATH}/access_zoom.json') as file:
     access_zoom_data = json.load(file)
 
 ZOOM_BUCKET = 'rawdata-zoom'
