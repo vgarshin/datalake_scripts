@@ -20,7 +20,7 @@ from pyspark.sql.functions import struct
 from pyspark.sql.functions import countDistinct
 import multiprocessing
 
-MOUNT_PATH = '.' #'/home/jovyan/zoomdataload'
+MOUNT_PATH = '/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-zoom'
 STAGING_PATH = 'staging'
 CUR_TIMESTAMP = datetime.datetime.now()
