@@ -187,13 +187,15 @@ class ZoomLoader():
 def load_all():
     if len(sys.argv) > 1:
         date_to_load = str(sys.argv[1])
+        upfolder_name = str(sys.argv[1])
     else:
         date_to_load = CUR_TIMESTAMP_CUT
+        upfolder_name = CUR_TIMESTAMP
     loader = ZoomLoader(mount_path=MOUNT_PATH, bucket=BUCKET)
     try:
         logs_upfolder = '-'.join([
             LOGS_UPFOLDER_BASE,
-            str(CUR_TIMESTAMP).replace(' ', '-').replace(':', '-').replace('.', '-')
+            str(upfolder_name).replace(' ', '-').replace(':', '-').replace('.', '-')
         ])
         meetings_data = loader.load_logs_dates(
             from_time=str(date_to_load),
