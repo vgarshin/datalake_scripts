@@ -43,7 +43,7 @@ class ZoomLoader():
     def __init__(self, mount_path, bucket):
         self.mount_path = mount_path
         self.bucket = bucket
-        self.logger = self.init_logger(f'{mount_path}/zoom_load.log')
+        self.logger = self.init_logger(f'{mount_path}/logs/zoom_load.log')
         self.logger.info('Zoom data loading started')
         self.access_s3_data = self.access_data(f'{mount_path}/access_s3.json')
         self.access_zoom_data = self.access_data(f'{mount_path}/access_zoom.json')
