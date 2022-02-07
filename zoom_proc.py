@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import sys
 import json
 import boto3
 import logging
@@ -19,7 +20,7 @@ from pyspark.sql.functions import struct
 from pyspark.sql.functions import countDistinct
 import multiprocessing
 
-MOUNT_PATH = '.'
+MOUNT_PATH = '.' #'/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-zoom'
 STAGING_PATH = 'staging'
 CUR_TIMESTAMP = datetime.datetime.now()
@@ -27,19 +28,8 @@ CUR_TIMESTAMP = datetime.datetime.now()
 # for mask to collect files by Spark
 # str(CUR_TIMESTAMP).split()[0] for current date
 # or empty string '' to collect all 
-CUR_TIMESTAMP_CUT = '' #'2022-02-01'
-# HEAD_TITLE = 'hst' or 'air' to collect 
-# historical (hst) data or every day (air) data
-HEAD_TITLE = 'hst'
-MASK_FILES = '{}-meetings-logs-{}*/meetings_logs_{}*.json'.format(
-    HEAD_TITLE,
-    CUR_TIMESTAMP_CUT,
-    CUR_TIMESTAMP_CUT
-)
-# MODE is 'append' or 'overwrite'
-# for change mode append or overwrite data
-# in database and staging data 
-MODE = 'overwrite'
+CUR_TIMESTAMP_CUT = str(CUR_TIMESTAMP).split()[0]
+TEST = True
 
 class ZoomProcessor():
     def __init__(self, mount_path, bucket, staging_path, mode):
@@ -236,13 +226,69 @@ class ZoomProcessor():
             if mask in key['Key']
         ]
         return all_files, len(all_files)
+    
+    def check_loaded(self):
+        print('----------- CHECK START -------------')
+        df = self.spark.read.parquet(f's3a://{BUCKET}/{STAGING_PATH}/meetings')
+        msg = f'meetings parquet: {df.count()}'
+        print(msg)
+        self.logger.debug(msg)
+        query = '''
+        SELECT * FROM meetings;
+        '''
+        result = self.send_query(query, res=True)
+        msg = f'meetings database: {len(result)}'
+        print(msg)
+        self.logger.debug(msg)
+        msg = f'sample: {result[0]}'
+        print(msg)
+        self.logger.debug(msg)
+
+        df = self.spark.read.parquet(f's3a://{BUCKET}/{STAGING_PATH}/records')
+        msg = f'records parquet: {df.count()}'
+        print(msg)
+        self.logger.debug(msg)
+        query = '''
+        SELECT * FROM records;
+        '''
+        result = self.send_query(query, res=True)
+        msg = f'records database {len(result)}'
+        print(msg)
+        self.logger.debug(msg)
+        msg = f'sample: {result[0]}'
+        print(msg)
+        self.logger.debug(msg)
+        print('------------ CHECK END --------------')
 
 def proc():
+    """
+    Main process function. Takes sys.args to control load and process data iin a form:
+      python <script_name> <head_title> <mode> <date>
+
+        :head_title: 'hst' or 'air' for mask files for Spark load
+        :mode: 'overwrite' or 'append'
+        :date: in a format 'YYYY-MM-DD' or 'all' (all dates)
+    
+    """
+    try:
+        mask_files = '{}-meetings-logs-{}*/meetings_logs_{}*.json'.format(
+            sys.argv[1],
+            '' if sys.argv[3] == 'all' else  sys.argv[3],
+            '' if sys.argv[3] == 'all' else  sys.argv[3]
+        )
+        mode = sys.argv[2]
+    except:
+        mask_files = '{}-meetings-logs-{}*/meetings_logs_{}*.json'.format(
+            'air',
+            CUR_TIMESTAMP_CUT,
+            CUR_TIMESTAMP_CUT
+        )
+        mode = 'append'
     processor = ZoomProcessor(
         mount_path=MOUNT_PATH, 
         bucket=BUCKET, 
         staging_path=STAGING_PATH, 
-        mode=MODE
+        mode=mode
     )
     try:
         all_files, num_files = processor.s3_all_files(mask='')
@@ -254,7 +300,7 @@ def proc():
         #######################################
 
         sdf = processor.sdf_meetings_preproc(
-            file_path = f's3a://{BUCKET}/{MASK_FILES}'
+            file_path = f's3a://{BUCKET}/{mask_files}'
         )
         if sdf:
             query = '''
@@ -328,6 +374,8 @@ def proc():
             processor.send_query(query)
             processor.save_parquet(sdf=sdf_rec, save_name='records')
             processor.save_spark_postgres(sdf=sdf_rec, table_name='records')
+            if TEST:
+                processor.check_loaded()
         else:
             processor.logger.info('no data to process')
     except Exception as e:
@@ -337,33 +385,5 @@ def proc():
     msg = 'finished'
     processor.logger.info(msg)
 
-def check():
-    processor = ZoomProcessor(
-        mount_path=MOUNT_PATH, 
-        bucket=BUCKET, 
-        staging_path=STAGING_PATH, 
-        mode=MODE
-    )
-    df = processor.spark.read.parquet(f's3a://{BUCKET}/{STAGING_PATH}/meetings')
-    print('meetings parquet:', df.count())
-    query = '''
-    SELECT * FROM meetings;
-    '''
-    result = processor.send_query(query, res=True)
-    print('meetings database:', len(result))
-    print('sample:', result[0])
-    
-    df = processor.spark.read.parquet(f's3a://{BUCKET}/{STAGING_PATH}/records')
-    print('records parquet:', df.count())
-    query = '''
-    SELECT * FROM records;
-    '''
-    result = processor.send_query(query, res=True)
-    print('records database:', len(result))
-    print('sample:', result[0])
-    
-    processor.spark.stop()
-
 if __name__ == '__main__':
     proc()
-    check()
