@@ -181,16 +181,15 @@ class ZoomLoader():
                         file_path
                     ))
                 # participants
-                url = 'https://api.zoom.us/v2/metrics/meetings/' + meeting["uuid"] + '/participants?page_size=300&type=past'
-                data = self.get_content(url, timeout=TIMEOUT, file=True)
+                url = 'https://api.zoom.us/v2/metrics/meetings/' + meeting['uuid'] + '/participants?page_size=300&type=past'
+                data = self.get_content(url, timeout=TIMEOUT)
                 if data:
-                    data_enc = ast.literal_eval(str(data))
+                    data_enc= json.loads(data)
                     data_enc = {
                         'uuid': meeting['uuid'],
                         'participants_data': data_enc
                     }
-                    data_enc = bytes(json.dumps(data, default=str).encode())
-                    data_enc= json.loads(data_enc)
+                    data_enc = bytes(json.dumps(data_enc, default=str).encode())
                     file_name = f'participants_{str(getrandbits(32))}.json'
                     file_path = root_dir + '/' + str(meeting['id']) + '/' + file_name
                     self.s3.put_object(
