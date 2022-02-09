@@ -10,7 +10,7 @@ import boto3
 import socket
 import logging
 import datetime
-from random import randint
+from random import randint, getrandbits
 from urllib.request import (
     Request,
     urlopen,
@@ -22,14 +22,14 @@ from urllib.request import (
 from urllib.parse import quote, unquote
 from time import sleep, gmtime, strftime
 
-MOUNT_PATH = '/home/jovyan/zoomdataload'
+MOUNT_PATH = '.' #'/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-zoom'
 MIN_TIME_SLEEP = 0
 MAX_TIME_SLEEP = 0
 MAX_COUNTS = 5
 TIMEOUT = 20
-LOGS_UPFOLDER_BASE = 'air-meetings-logs'
-ROOT_DIR = 'air-meetings-data'
+LOGS_UPFOLDER_BASE = 'TEST-meetings-logs'
+ROOT_DIR = 'TEST-meetings-data'
 # CUR_TIMESTAMP can be set as '2022-01-31' for exact date
 # you may also use 'python zoom_load.py 2022-01-31' 
 # when start script
@@ -131,13 +131,13 @@ class ZoomLoader():
         try:
             data = self.get_content(url, timeout=TIMEOUT)
             data_enc = bytes(json.dumps(data, default=str).encode())
-            filename = f'meetings_logs_{from_time}_{to_time}.json'
-            filepath = f'{logs_upfolder}/{filename}'
+            file_name = f'meetings_logs_{from_time}_{to_time}.json'
+            file_path = f'{logs_upfolder}/{file_name}'
             data_enc= json.loads(data_enc)
             self.s3.put_object(
                 Body=data_enc, 
                 Bucket=self.bucket, 
-                Key=filepath
+                Key=file_path
             )
             self.logger.info(f'{url} -> uploaded')
             output = data
@@ -150,6 +150,7 @@ class ZoomLoader():
         count = 0
         for meeting in meetings_data['meetings']:
             try:
+                # records
                 for record_file in meeting['recording_files']:
                     file_name = '{}-{}.{}'.format(
                         record_file['recording_type'].replace('_', '-'),
@@ -179,6 +180,27 @@ class ZoomLoader():
                         self.bucket,
                         file_path
                     ))
+                # participants
+                url = 'https://api.zoom.us/v2/metrics/meetings/' + meeting["uuid"] + '/participants?page_size=300&type=past'
+                data = self.get_content(url, timeout=TIMEOUT, file=True)
+                if data:
+                    data_enc = ast.literal_eval(str(data))
+                    data_enc = {
+                        'uuid': meeting['uuid'],
+                        'participants_data': data_enc
+                    }
+                    data_enc = bytes(json.dumps(data, default=str).encode())
+                    data_enc= json.loads(data_enc)
+                    file_name = f'participants_{str(getrandbits(32))}.json'
+                    file_path = root_dir + '/' + str(meeting['id']) + '/' + file_name
+                    self.s3.put_object(
+                        Body=data_enc, 
+                        Bucket=self.bucket, 
+                        Key=file_path
+                    )
+                    self.logger.info(f'{url} - uploaded to {file_path}')
+                else:
+                    self.logger.info(f'no participants data - meeting {meeting["uuid"]}')
             except Exception as e:
                 self.logger.error(f'load meetings data {meeting} - {e}')
             count += 1
