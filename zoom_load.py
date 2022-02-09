@@ -22,14 +22,14 @@ from urllib.request import (
 from urllib.parse import quote, unquote
 from time import sleep, gmtime, strftime
 
-MOUNT_PATH = '.' #'/home/jovyan/zoomdataload'
+MOUNT_PATH = '/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-zoom'
 MIN_TIME_SLEEP = 0
 MAX_TIME_SLEEP = 0
 MAX_COUNTS = 5
 TIMEOUT = 20
-LOGS_UPFOLDER_BASE = 'TEST-meetings-logs'
-ROOT_DIR = 'TEST-meetings-data'
+LOGS_UPFOLDER_BASE = 'air-meetings-logs'
+ROOT_DIR = 'air-meetings-data'
 # CUR_TIMESTAMP can be set as '2022-01-31' for exact date
 # you may also use 'python zoom_load.py 2022-01-31' 
 # when start script
