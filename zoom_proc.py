@@ -20,7 +20,7 @@ from pyspark.sql.functions import struct
 from pyspark.sql.functions import countDistinct
 import multiprocessing
 
-MOUNT_PATH = '/home/jovyan/zoomdataload'
+MOUNT_PATH = '.'#'/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-zoom'
 STAGING_PATH = 'staging'
 CUR_TIMESTAMP = datetime.datetime.now()
@@ -170,6 +170,42 @@ class ZoomProcessor():
         except Exception as e:
             self.logger.error(f'records dataframe - {e}')
         return sdf
+    
+    def sdf_participants_preproc(self, file_path):
+        sdf = None
+        try:
+            sdf = self.spark.read.json(
+                file_path
+            )
+            files = sdf.count()
+            sdf = sdf.select(
+                'uuid', 
+                F.explode(
+                    F.create_map(
+                        F.lit('participants_data'), 
+                        F.col('participants_data.participants')
+                    )
+                )
+            )
+            sdf = sdf.select(sdf.uuid, F.explode(sdf.value))
+            sdf = self.flat_df(sdf)
+            sdf = sdf.withColumn(
+                'col_join_time',
+                F.to_timestamp("col_join_time", "yyyy-MM-dd'T'HH:mm:ss'Z'")
+            )
+            sdf = sdf.withColumn(
+                'col_leave_time',
+                F.to_timestamp("col_leave_time", "yyyy-MM-dd'T'HH:mm:ss'Z'")
+            )
+            sdf = sdf.withColumn(
+                'col_internal_ip_addresses',
+                F.concat_ws(",", F.col("col_internal_ip_addresses"))
+            )
+            pts = sdf.count()
+            self.logger.info(f'participants dataframe - total files {files}, total participants: {pts}')
+        except Exception as e:
+            self.logger.error(f'meetings participants - {e}')
+        return sdf
         
     def save_spark_postgres(self, sdf, table_name):
         """
@@ -250,6 +286,21 @@ class ZoomProcessor():
         self.logger.debug(msg)
         query = '''
         SELECT * FROM records;
+        '''
+        result = self.send_query(query, res=True)
+        msg = f'records database {len(result)}'
+        print(msg)
+        self.logger.debug(msg)
+        msg = f'sample: {result[0]}'
+        print(msg)
+        self.logger.debug(msg)
+        
+        df = self.spark.read.parquet(f's3a://{BUCKET}/{STAGING_PATH}/participants')
+        msg = f'records parquet: {df.count()}'
+        print(msg)
+        self.logger.debug(msg)
+        query = '''
+        SELECT * FROM participants;
         '''
         result = self.send_query(query, res=True)
         msg = f'records database {len(result)}'
@@ -374,6 +425,60 @@ def proc():
             processor.send_query(query)
             processor.save_parquet(sdf=sdf_rec, save_name='records')
             processor.save_spark_postgres(sdf=sdf_rec, table_name='records')
+            
+            #######################################
+            ############ PARTICIPANTS #############
+            #######################################            
+            
+            mask_files = '*-meetings-data/*/participants_*.json'
+            sdf_pts = processor.sdf_participants_preproc(
+                file_path = f's3a://{BUCKET}/{mask_files}'
+            )
+            query = '''
+            CREATE TABLE IF NOT EXISTS participants (
+                id bigserial primary key,
+                meeting_uuid varchar(24),
+                camera text,
+                connection_type varchar(8),
+                customer_key text,
+                data_center text,
+                device text,
+                domain text,
+                email varchar(128),
+                from_sip_uri text,
+                full_data_center text,
+                harddisk_id text,
+                id varchar(22),
+                internal_ip_addresses text,
+                ip_address varchar(16),
+                join_time timestamp,
+                leave_reason text,
+                leave_time timestamp,
+                location text,
+                mac_addr text,
+                microphone text,
+                network_type text,
+                participant_user_id text,
+                pc_name text,
+                recording boolean,
+                registrant_id string,
+                role string,
+                share_application boolean,
+                share_desktop boolean,
+                share_whiteboard boolean,
+                sip_uri text,
+                speaker text,
+                status text,
+                user_id varchar(9),
+                user_name text,
+                version text
+            );
+            '''
+            processor.mode = 'overwrite'
+            processor.send_query(query)
+            processor.save_parquet(sdf=sdf_pts, save_name='participants')
+            processor.save_spark_postgres(sdf=sdf_pts, table_name='participants')
+            
             if TEST:
                 processor.check_loaded()
         else:
