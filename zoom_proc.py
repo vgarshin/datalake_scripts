@@ -473,6 +473,8 @@ def proc():
                 user_name text,
                 version text
             );
+            GRANT SELECT ON ALL TABLES IN SCHEMA public TO dbzoomreader;
+            GRANT USAGE ON SCHEMA public TO dbzoomreader;
             '''
             processor.mode = 'overwrite'
             processor.send_query(query)
