@@ -20,7 +20,7 @@ from pyspark.sql.functions import struct
 from pyspark.sql.functions import countDistinct
 import multiprocessing
 
-MOUNT_PATH = '.'#'/home/jovyan/zoomdataload'
+MOUNT_PATH = '/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-zoom'
 STAGING_PATH = 'staging'
 CUR_TIMESTAMP = datetime.datetime.now()
@@ -398,11 +398,11 @@ def proc():
             )
             processor.save_parquet(sdf=sdf_save, save_name='meetings')
             processor.save_spark_postgres(sdf=sdf_save, table_name='meetings')
-
+            
             #######################################
             ############ RECORDS ##################
             #######################################
-
+            
             sdf_rec = processor.sdf_records_preproc(sdf)
             query = '''
             CREATE TABLE IF NOT EXISTS records (
