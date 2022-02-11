@@ -473,13 +473,17 @@ def proc():
                 user_name text,
                 version text
             );
-            GRANT SELECT ON ALL TABLES IN SCHEMA public TO dbzoomreader;
-            GRANT USAGE ON SCHEMA public TO dbzoomreader;
             '''
             processor.mode = 'overwrite'
             processor.send_query(query)
             processor.save_parquet(sdf=sdf_pts, save_name='participants')
             processor.save_spark_postgres(sdf=sdf_pts, table_name='participants')
+            
+            query = '''
+            GRANT SELECT ON ALL TABLES IN SCHEMA public TO dbzoomreader;
+            GRANT USAGE ON SCHEMA public TO dbzoomreader;
+            '''
+            processor.send_query(query)
             
             if TEST:
                 processor.check_loaded()
