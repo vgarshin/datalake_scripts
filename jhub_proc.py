@@ -265,14 +265,13 @@ def proc():
             )
             mode = 'overwrite'
     except:
-        load_date = str(CUR_TIMESTAMP).split()[0]
-        load_time = str(CUR_TIMESTAMP).split()[1]
+        lts = CUR_TIMESTAMP - datetime.timedelta(hours=1)
         mask_files = '{}/{}/{}/{}/{}/*/*'.format(
             'fluent-bit-logs/kube.var.log.containers.hub*',
-            str(CUR_TIMESTAMP.year),    # year
-            '0' + str(CUR_TIMESTAMP.month) if CUR_TIMESTAMP.month < 10 else str(CUR_TIMESTAMP.month),   # month
-            str(CUR_TIMESTAMP.day),     # day
-            str(CUR_TIMESTAMP.hour - 1) # hour
+            str(lts.year),                                              # year
+            '0' + str(lts.month) if lts.month < 10 else str(lts.month), # month
+            '0' + str(lts.day) if lts.day < 10 else str(lts.day),       # day
+            '0' + str(lts.hour) if lts.hour < 10 else str(lts.hour)     # hour
         )
         mode = 'append'
         
