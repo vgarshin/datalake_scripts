@@ -22,7 +22,7 @@ from urllib.request import (
 from urllib.parse import quote, unquote
 from time import sleep, gmtime, strftime
 
-MOUNT_PATH = '.'#'/home/jovyan/zoomdataload'
+MOUNT_PATH = '/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-monkey'
 MIN_TIME_SLEEP = 0
 MAX_TIME_SLEEP = 0
