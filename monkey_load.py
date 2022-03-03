@@ -22,7 +22,7 @@ from urllib.request import (
 from urllib.parse import quote, unquote
 from time import sleep, gmtime, strftime
 
-MOUNT_PATH = '/home/jovyan/zoomdataload'
+MOUNT_PATH = '.'#'/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-monkey'
 MIN_TIME_SLEEP = 0
 MAX_TIME_SLEEP = 0
@@ -133,7 +133,7 @@ class MonkeyLoader():
     def surveys_write_s3(self, cur_date):
         output = None
         self.logger.info(f'uploading to bucket -> {BUCKET}')
-        url = 'https://api.surveymonkey.com/v3/surveys?per_page=300'
+        url = 'https://api.surveymonkey.com/v3/surveys?include=response_count,date_created,date_modified,language,question_count&per_page=300'
         try:
             data = self.json_data_pages(url)
             data_enc= json.dumps(data)
@@ -150,38 +150,17 @@ class MonkeyLoader():
             self.logger.error(f'load survey {url} - {e}')
         return output
 
-    def details_write_s3(self, data, upfolder):
+    def details_write_s3(self, data, upfolder, cut_date):
         all_surveys = []
         self.logger.info(f'uploading to bucket -> {BUCKET}, to folder -> {upfolder}')
         try:
-            for survey in data['data']:
-                url = survey['href'] + '/details'
-                data = self.json_data(url)
-                data_enc= json.dumps(data)
-                file_name = f'survey_{survey["id"]}.json'
-                file_path = f'{upfolder}/{file_name}'
-                self.s3.put_object(
-                    Body=data_enc, 
-                    Bucket=BUCKET, 
-                    Key=file_path
-                )
-                self.logger.info(f'{url} -> uploaded')
-                all_surveys.append(data)
-        except Exception as e:
-            self.logger.error(f'load detailed surveys - {e}')
-        return all_surveys    
-
-    def responses_write_s3(self, all_surveys, upfolder, cut_date):
-        responses = []
-        self.logger.info(f'uploading to bucket -> {BUCKET}, to folder -> {upfolder}')
-        try:
-            for s in all_surveys:
+            for s in data['data']:
                 dtm = datetime.datetime.strptime(s['date_modified'], '%Y-%m-%dT%H:%M:%S')
-                if dtm.date() <= cut_date:
-                    url = s['href'] + "/responses/bulk?per_page=100"
-                    data = self.json_data_pages(url)
+                if dtm.date() >= cut_date:
+                    url = s['href'] + '/details'
+                    data = self.json_data(url)
                     data_enc= json.dumps(data)
-                    file_name = f'responses_{s["id"]}.json'
+                    file_name = f'survey_{s["id"]}.json'
                     file_path = f'{upfolder}/{file_name}'
                     self.s3.put_object(
                         Body=data_enc, 
@@ -189,7 +168,28 @@ class MonkeyLoader():
                         Key=file_path
                     )
                     self.logger.info(f'{url} -> uploaded')
-                    responses.append(data)
+                    all_surveys.append(data)
+        except Exception as e:
+            self.logger.error(f'load detailed surveys - {e}')
+        return all_surveys    
+
+    def responses_write_s3(self, all_surveys, upfolder):
+        responses = []
+        self.logger.info(f'uploading to bucket -> {BUCKET}, to folder -> {upfolder}')
+        try:
+            for s in all_surveys:
+                url = s['href'] + "/responses/bulk?per_page=100"
+                data = self.json_data_pages(url)
+                data_enc= json.dumps(data)
+                file_name = f'responses_{s["id"]}.json'
+                file_path = f'{upfolder}/{file_name}'
+                self.s3.put_object(
+                    Body=data_enc, 
+                    Bucket=BUCKET, 
+                    Key=file_path
+                )
+                self.logger.info(f'{url} -> uploaded')
+                responses.append(data)
         except Exception as e:
             self.logger.error(f'load responses - {e}')
         return responses
@@ -207,13 +207,17 @@ def load_all():
         loader.logger.info(f'date parameter to load {cur_date}')
         data = loader.surveys_write_s3(cur_date)
         loader.logger.info(f'total surveys {len(data["data"])}')
-        all_surveys = loader.details_write_s3(data, upfolder='details')
-        cut_date = cur_date - datetime.timedelta(days=lag_day)
+        all_surveys = loader.details_write_s3(
+            data, 
+            upfolder='details',
+            cut_date=cur_date - datetime.timedelta(days=lag_day)
+        )
+        loader.logger.info(f'fresh surveys to load {len(all_surveys)}')
         responses = loader.responses_write_s3(
             all_surveys, 
-            upfolder='responses', 
-            cut_date=cut_date
+            upfolder='responses'
         )
+        loader.logger.info(f'fresh responses to load {len(responses)}')
         loader.logger.info('SurveyMonkey data load finished')
     except Exception as e:
         loader.logger.error(f'main load - {e}')
