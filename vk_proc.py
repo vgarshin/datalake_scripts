@@ -18,7 +18,7 @@ from pyspark.sql.types import *
 from pyspark.sql.functions import udf, struct, countDistinct
 import multiprocessing
 
-MOUNT_PATH = '.'#'/home/jovyan/zoomdataload'
+MOUNT_PATH = '/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-vk'
 STAGING_PATH = 'staging'
 CUR_TIMESTAMP = datetime.datetime.now()
