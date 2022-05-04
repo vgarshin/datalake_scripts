@@ -29,7 +29,7 @@ class VKProcessor():
         self.bucket = bucket
         self.staging_path = staging_path
         self.mode = mode
-        self.logger = self.init_logger(f'{mount_path}/vk_proc.log')
+        self.logger = self.init_logger(f'{mount_path}/logs/vk_proc.log')
         self.logger.info('VKontakte data processing started')
         self.access_s3_data = self.access_data(f'{mount_path}/access_s3.json')
         self.access_postgres = self.access_data(f'{mount_path}/access_postgres_vk.json')
