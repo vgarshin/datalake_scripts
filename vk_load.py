@@ -299,9 +299,9 @@ class VKLoader():
         return output
 
 def load_all():
-    # in a format 'gsom_ma'
+    # in a format 'gsom_ma', 'gsom_abiturient' or 'gsom.spbu'
     group = str(sys.argv[1])
-    dir_name = f'{group}-{str(CUR_TIMESTAMP).replace(" ", "-").replace(":", "-").replace(".", "-")}'
+    dir_name = f'{group.replace(".", "-")}-{str(CUR_TIMESTAMP).replace(" ", "-").replace(":", "-").replace(".", "-")}'
     loader = VKLoader(mount_path=MOUNT_PATH, bucket=BUCKET)
     try:
         # load data on group
