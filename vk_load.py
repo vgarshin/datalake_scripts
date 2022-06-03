@@ -24,8 +24,8 @@ from time import sleep, gmtime, strftime
 
 MOUNT_PATH = '/home/jovyan/zoomdataload'
 BUCKET = 'rawdata-vk'
-MIN_TIME_SLEEP = 0
-MAX_TIME_SLEEP = 0
+MIN_TIME_SLEEP = 1
+MAX_TIME_SLEEP = 2
 MAX_COUNTS = 5
 TIMEOUT = 20
 CUR_TIMESTAMP = datetime.datetime.now()
@@ -177,6 +177,7 @@ class VKLoader():
                 ])
                 data_tmp = self.json_data(url)
                 data['response']['items'].extend(data_tmp['response']['items'])
+                sleep(randint(MIN_TIME_SLEEP, MAX_TIME_SLEEP))
             data_enc= json.dumps(data['response'])
             file_name = f'wall_owner_id_{owner_id}.json'
             file_path = f'{dir_name}/{file_name}'
@@ -220,6 +221,7 @@ class VKLoader():
                 ])
                 data_tmp = self.json_data(url)
                 data['response']['items'].extend(data_tmp['response']['items'])
+                sleep(randint(MIN_TIME_SLEEP, MAX_TIME_SLEEP))
             data_enc= json.dumps(data['response'])
             file_name = f'members_group_{group}.json'
             file_path = f'{dir_name}/{file_name}'
@@ -262,6 +264,7 @@ class VKLoader():
                 ])
                 data_tmp = self.json_data(url)
                 data['response'].extend(data_tmp['response'])
+                sleep(randint(MIN_TIME_SLEEP, MAX_TIME_SLEEP))
             data_enc= json.dumps(data['response'])
             file_name = f'members_full_group_{group}.json'
             file_path = f'{dir_name}/{file_name}'
