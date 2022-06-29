@@ -115,11 +115,23 @@ class VKLoader():
         return content
 
     def json_data(self, url):
-        data = self.get_content(
-            url, timeout=TIMEOUT, 
-            proxies=None, file=True
-        )
-        return json.loads(data)
+        counts = 0
+        flag = True
+        while flag:
+            data = self.get_content(
+                url, timeout=TIMEOUT, 
+                proxies=None, file=True
+            )
+            data = json.loads(data)
+            if 'response' in data:
+                flag = False
+            else:
+                counts += 1
+                if counts > MAX_COUNTS: 
+                    flag = False
+                self.logger.info(f'get data from VK API -> repeat count {counts}')
+                sleep(randint(counts * MIN_TIME_SLEEP, counts * MAX_TIME_SLEEP))
+        return data
 
     def group_data_write_s3(self, group, method, fields, dir_name):
         output = None
