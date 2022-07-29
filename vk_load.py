@@ -10,7 +10,7 @@ import boto3
 import socket
 import logging
 import datetime
-from random import randint, getrandbits
+from random import uniform, getrandbits
 from urllib.request import (
     Request,
     urlopen,
@@ -22,12 +22,13 @@ from urllib.request import (
 from urllib.parse import quote, unquote
 from time import sleep, gmtime, strftime
 
-MOUNT_PATH = '/home/jovyan/zoomdataload'
-BUCKET = 'rawdata-vk'
-MIN_TIME_SLEEP = 1
-MAX_TIME_SLEEP = 2
-MAX_COUNTS = 5
-TIMEOUT = 20
+MOUNT_PATH = '.'#'/home/jovyan/zoomdataload'
+BUCKET = 'rawdata-test-vk'
+MIN_TIME_SLEEP = .1
+MAX_TIME_SLEEP = 1.1
+MAX_COUNTS = 3
+MAX_COUNTS_DATA = 2
+TIMEOUT = 10
 CUR_TIMESTAMP = datetime.datetime.now()
 VER = '5.126'
 
@@ -103,15 +104,15 @@ class VKLoader():
             except URLError as e:
                 counts += 1
                 self.logger.error(f'URLError | {url_page} | {e} | counts {counts}')
-                sleep(randint(counts * MIN_TIME_SLEEP, counts * MAX_TIME_SLEEP))
+                sleep(uniform(counts * MIN_TIME_SLEEP, counts * MAX_TIME_SLEEP))
             except HTTPError as e:
                 counts += 1
                 self.logger.error(f'HTTPError | {url_page} | {e} | counts {counts}')
-                sleep(randint(counts * MIN_TIME_SLEEP, counts * MAX_TIME_SLEEP))
+                sleep(uniform(counts * MIN_TIME_SLEEP, counts * MAX_TIME_SLEEP))
             except socket.timeout as e:
                 counts += 1
                 self.logger.error(f'socket timeout | {url_page} | {e} | counts {counts}')
-                sleep(randint(counts * MIN_TIME_SLEEP, counts * MAX_TIME_SLEEP))
+                sleep(uniform(counts * MIN_TIME_SLEEP, counts * MAX_TIME_SLEEP))
         return content
 
     def json_data(self, url):
@@ -127,10 +128,10 @@ class VKLoader():
                 flag = False
             else:
                 counts += 1
-                if counts > MAX_COUNTS: 
+                if counts >= MAX_COUNTS_DATA: 
                     flag = False
-                self.logger.info(f'get data from VK API -> repeat count {counts}')
-                sleep(randint(counts * MIN_TIME_SLEEP, counts * MAX_TIME_SLEEP))
+                self.logger.info(f'get data from VK API, url {url} -> repeat count {counts}')
+                sleep(uniform(MIN_TIME_SLEEP, MAX_TIME_SLEEP))
         return data
 
     def group_data_write_s3(self, group, method, fields, dir_name):
@@ -189,7 +190,6 @@ class VKLoader():
                 ])
                 data_tmp = self.json_data(url)
                 data['response']['items'].extend(data_tmp['response']['items'])
-                sleep(randint(MIN_TIME_SLEEP, MAX_TIME_SLEEP))
             data_enc= json.dumps(data['response'])
             file_name = f'wall_owner_id_{owner_id}.json'
             file_path = f'{dir_name}/{file_name}'
@@ -233,7 +233,6 @@ class VKLoader():
                 ])
                 data_tmp = self.json_data(url)
                 data['response']['items'].extend(data_tmp['response']['items'])
-                sleep(randint(MIN_TIME_SLEEP, MAX_TIME_SLEEP))
             data_enc= json.dumps(data['response'])
             file_name = f'members_group_{group}.json'
             file_path = f'{dir_name}/{file_name}'
@@ -276,7 +275,6 @@ class VKLoader():
                 ])
                 data_tmp = self.json_data(url)
                 data['response'].extend(data_tmp['response'])
-                sleep(randint(MIN_TIME_SLEEP, MAX_TIME_SLEEP))
             data_enc= json.dumps(data['response'])
             file_name = f'members_full_group_{group}.json'
             file_path = f'{dir_name}/{file_name}'

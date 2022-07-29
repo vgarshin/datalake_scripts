@@ -160,7 +160,7 @@ class ZoomProcessor():
                 F.col('log_msg')[5].alias('log_msg')
             )
             sdf = sdf.withColumn(
-                'timestamp',
+                'time_stamp',
                 F.to_timestamp("time_stamp", "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS'Z'")
             )
             sdf = sdf.withColumn(
